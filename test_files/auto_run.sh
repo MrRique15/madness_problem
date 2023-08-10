@@ -33,7 +33,7 @@ done
 mean_runtime=$(echo "scale=6; $total_time / 10" | bc)
 
 # Print the mean runtime
-echo "Mean time for $EXECS executions: $mean_runtime seconds"
+echo "Average time for $EXECS executions: $mean_runtime seconds"
 
 # Delete the temporary file
 rm -f ./test_files/____tempfile.data.polybench;
