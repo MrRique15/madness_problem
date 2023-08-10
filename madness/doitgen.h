@@ -8,25 +8,25 @@
 
 # if !defined(NQ) && !defined(NR) && !defined(NP)
 /* Define sample dataset sizes. */
-#  ifdef MINI_DATASET
-#   define NQ 8
-#   define NR 10
-#   define NP 12
+#  ifdef MINI_DATASET     // used for small tests and quick verifications
+#   define NQ 150
+#   define NR 170
+#   define NP 220
 #  endif
 
-#  ifdef SMALL_DATASET
+#  ifdef SMALL_DATASET     // Initial values for larger tests
 #   define NQ 600
 #   define NR 640
 #   define NP 680
 #  endif
 
-#  ifdef MEDIUM_DATASET     // 100 units bigger than SMALL_DATASET
+#  ifdef MEDIUM_DATASET    // 100 units bigger than SMALL_DATASET
 #   define NQ 700
 #   define NR 750
 #   define NP 800
 #  endif
 
-#  ifdef LARGE_DATASET     // 100 units bigger than MEDIUM_DATASET
+#  ifdef LARGE_DATASET     // 200 units bigger than SMALL_DATASET
 #   define NQ 800
 #   define NR 850
 #   define NP 900
