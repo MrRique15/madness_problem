@@ -2,7 +2,7 @@
 Parallel MADNESS problem implementation
 
 
-# --- SEUENTIAL IMPLEMENTATION ---
+# --- SEQUENTIAL IMPLEMENTATION ---
 ## How to run
 1. Clone the repository
 2. Go to `makefile`, change `PROG` variable to the path of your C program to compile
