@@ -2,5 +2,3 @@
 // C/C++ comments are allowed.
 // Both native and standard PAPI events are supported.
 "PAPI_TOT_CYC",
-"PAPI_LD_INS",
-"PAPI_HW_INT",
