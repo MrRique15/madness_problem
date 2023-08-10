@@ -1,0 +1,1 @@
+doitgen	linear-algebra/kernels	double	NQ NR NP	8 10 12	20 25 30	40 50 60	140 150 160	220 250 270
