@@ -1,9 +1,9 @@
 #ifndef _DOITGEN_H
 # define _DOITGEN_H
 
-/* Default to LARGE_DATASET. */
+/* Default to SMALL_DATASET. */
 # if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
-#  define LARGE_DATASET
+#  define SMALL_DATASET
 # endif
 
 # if !defined(NQ) && !defined(NR) && !defined(NP)
@@ -17,27 +17,20 @@
 #  ifdef SMALL_DATASET
 #   define NQ 600
 #   define NR 640
-#   define NP 690
+#   define NP 680
 #  endif
 
-#  ifdef MEDIUM_DATASET
+#  ifdef MEDIUM_DATASET     // 10% bigger than SMALL_DATASET
+#   define NQ 660
+#   define NR 700
+#   define NP 740
+#  endif
+
+#  ifdef LARGE_DATASET
 #   define NQ 40
 #   define NR 50
 #   define NP 60
 #  endif
-
-#  ifdef LARGE_DATASET
-#   define NQ 140
-#   define NR 150
-#   define NP 160
-#  endif
-
-#  ifdef EXTRALARGE_DATASET
-#   define NQ 560
-#   define NR 600
-#   define NP 640
-#  endif
-
 
 #endif /* !(NQ NR NP) */
 
