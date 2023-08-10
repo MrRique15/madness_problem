@@ -1,0 +1,5 @@
+###### buildar com papi e MINI_DATASET
+gcc -O3 -I utilities -I linear-algebra/kernels/doitgen utilities/polybench.c linear-algebra/kernels/doitgen/doitgen.c -DPOLYBENCH_PAPI -DMINI_DATASET -lpapi -o doitgen_papi
+
+###### buildar com TIME e MINI_DATASET
+gcc -O3 -I utilities -I linear-algebra/kernels/doitgen utilities/polybench.c linear-algebra/kernels/doitgen/doitgen.c -DPOLYBENCH_TIME -DMINI_DATASET -o doitgen_time
