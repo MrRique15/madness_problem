@@ -20,16 +20,16 @@
 #   define NP 680
 #  endif
 
-#  ifdef MEDIUM_DATASET     // 10% bigger than SMALL_DATASET
-#   define NQ 660
-#   define NR 700
-#   define NP 740
+#  ifdef MEDIUM_DATASET     // 100 units bigger than SMALL_DATASET
+#   define NQ 700
+#   define NR 750
+#   define NP 800
 #  endif
 
-#  ifdef LARGE_DATASET
-#   define NQ 40
-#   define NR 50
-#   define NP 60
+#  ifdef LARGE_DATASET     // 100 units bigger than MEDIUM_DATASET
+#   define NQ 800
+#   define NR 850
+#   define NP 900
 #  endif
 
 #endif /* !(NQ NR NP) */
