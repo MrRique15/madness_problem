@@ -18,3 +18,7 @@ build_papi:
 
 run_tests:
 	./test_files/auto_run.sh ./builds/$(OUTPUT_NAME) $(EXECUTIONS)
+
+# github actions build to check if it compiles (DON'T CHANGE)
+build_git_actions:
+	gcc -O3 -I utilities -I $(PROG) utilities/polybench.c $(PROG).c -DPOLYBENCH_TIME -DMINI_DATASET -o builds/$(OUTPUT_NAME)
