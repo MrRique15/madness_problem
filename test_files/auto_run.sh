@@ -3,9 +3,9 @@
 # Initialize a variable to store the total runtime
 total_time=0
 
-if [ $# -ne 2 ]; then
-    echo "Usage: ./time_benchmarh.sh <binary_name> <executions>";
-    echo "Example: ./time_benchmarh.sh \"./a.out\" 10";
+if [ $# -ne 5 ]; then
+    echo "Usage: ./auto_run.sh <binary_name> <executions> <data_set (-d[test/small/medium/large])> <threads (-t[value])> <seed (-s[seed])>";
+    echo "Example: ./auto_run.sh \"./a.out\" 10";
     echo "Note: the file must be a Polybench program compiled with -DPOLYBENCH_TIME";
     exit 1;
 fi;
@@ -14,6 +14,9 @@ fi;
 PRORGAM_PATH="$1"
 # Get the number of executions from the second argument
 EXECS="$2"
+DATA_SET="$3"
+THREADS="$4"
+SEED="$5"
 
 # Run the program 10 times
 for ((i=1; i<=$EXECS; i++)); do
@@ -30,7 +33,7 @@ for ((i=1; i<=$EXECS; i++)); do
 done
 
 # Calculate the mean runtime
-mean_runtime=$(echo "scale=6; $total_time / 10" | bc)
+mean_runtime=$(echo "scale=6; $total_time / $EXECS" | bc)
 
 # Print the mean runtime
 echo "Average time for $EXECS executions: $mean_runtime seconds"

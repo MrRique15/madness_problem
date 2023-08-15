@@ -1,4 +1,4 @@
 // Counters must be delimited with ',' including the last one.
 // C/C++ comments are allowed.
 // Both native and standard PAPI events are supported.
-"LSD:CYCLES_OK",
+"PAPI_TOT_CYC",
