@@ -39,25 +39,9 @@
 # define _PB_NR POLYBENCH_LOOP_BOUND(NR,nr)
 # define _PB_NP POLYBENCH_LOOP_BOUND(NP,np)
 
-
 /* Default data type */
-# if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) && !defined(DATA_TYPE_IS_DOUBLE)
-#  define DATA_TYPE_IS_FLOAT
-# endif
-
-#ifdef DATA_TYPE_IS_INT
-#  define DATA_TYPE int
-#  define DATA_PRINTF_MODIFIER "%d "
-#endif
-
-#ifdef DATA_TYPE_IS_FLOAT
-#  define DATA_TYPE float
-#  define DATA_PRINTF_MODIFIER "%0.2f "
-#  define SCALAR_VAL(x) x##f
-#  define SQRT_FUN(x) sqrtf(x)
-#  define EXP_FUN(x) expf(x)
-#  define POW_FUN(x,y) powf(x,y)
-# endif
+# if !defined(DATA_TYPE_IS_DOUBLE)
+#  define DATA_TYPE_IS_DOUBLE
 
 #ifdef DATA_TYPE_IS_DOUBLE
 #  define DATA_TYPE double
