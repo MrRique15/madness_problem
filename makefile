@@ -1,5 +1,6 @@
 # C Program Path to compile
-PROG = madness/doitgen  # or -> madness/doitgen_parallel
+# or -> madness/doitgen_parallel
+PROG = madness/doitgen
 # Runtime parameters
 DATASET = test
 THREADS = 2
