@@ -42,6 +42,7 @@
 /* Default data type */
 # if !defined(DATA_TYPE_IS_DOUBLE)
 #  define DATA_TYPE_IS_DOUBLE
+# endif
 
 #ifdef DATA_TYPE_IS_DOUBLE
 #  define DATA_TYPE double

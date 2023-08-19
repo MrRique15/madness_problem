@@ -2,7 +2,7 @@
 PROG = madness/doitgen
 # Runtime parameters
 DATASET = test
-THREADS = 1
+THREADS = 2
 SEED = 58
 
 # Output name

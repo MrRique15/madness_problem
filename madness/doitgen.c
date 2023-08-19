@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
@@ -74,17 +75,18 @@ void define_dataset(char data_set_identifier, int *nq, int *nr, int *np)
     }
 }
 /* Array initialization. */
-void init_array(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq, np, nr, nq, np), DATA_TYPE POLYBENCH_2D(C4, np, np, np, np))
+void init_arrays(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq, np, nr, nq, np), DATA_TYPE POLYBENCH_2D(C4, np, np, np, np), int seed)
 {
     int i, j, k;
 
+    srand(seed);
     for (i = 0; i < nr; i++)
         for (j = 0; j < nq; j++)
             for (k = 0; k < np; k++)
-                A[i][j][k] = (DATA_TYPE)((i * j + k) % np) / np;
+                A[i][j][k] = (DATA_TYPE)rand() / RAND_MAX;
     for (i = 0; i < np; i++)
         for (j = 0; j < np; j++)
-            C4[i][j] = (DATA_TYPE)(i * j % np) / np;
+            C4[i][j] = (DATA_TYPE)rand() / RAND_MAX;
 }
 
 /* DCE code. Must scan the entire live-out data.
@@ -170,7 +172,7 @@ int main(int argc, char **argv){
     POLYBENCH_2D_ARRAY_DECL(C4, DATA_TYPE, np, np, np, np);
 
     /* Initialize array(s). */
-    init_array(nr, nq, np, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(C4));
+    init_arrays(nr, nq, np, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(C4), seed);
 
     /* Start timer. */
     polybench_start_instruments;
