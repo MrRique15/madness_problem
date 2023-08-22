@@ -22,16 +22,20 @@ SEED="$5"
 for ((i=1; i<=$EXECS; i++)); do
     echo "Running iteration $i..."
     
+    #./$PRORGAM_PATH "$@"
+    
     # Capture the runtime from the program's console output
-    runtime=$(./$PRORGAM_PATH | grep -oP '\K[0-9]+\.[0-9]+')
+    runtime=$(./$PRORGAM_PATH "$@"| grep -oP '\K[0-9]+\.[0-9]+')
     
     # Append the runtime to a temporary file
     echo "$runtime" >> ./test_files/____tempfile.data.polybench
+    
     
     # Add the runtime to the total_time
     total_time=$(echo "$total_time + $runtime" | bc)
 done
 
+echo "total_time: $total_time"
 # Calculate the mean runtime
 mean_runtime=$(echo "scale=6; $total_time / $EXECS" | bc)
 
