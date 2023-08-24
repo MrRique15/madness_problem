@@ -11,13 +11,13 @@ fi;
 PRORGAM_PATH="$1"
 # Get the number of executions from the second argument
 EXECS=10
-DATA_SET="test"
 THREADS=0
 SEED=58
 
 # -----------------------------------------------------------------------------------------------
 # RUNNING SMALL DATASET
 # -----------------------------------------------------------------------------------------------
+DATA_SET="small"
 total_time=0
 mean_runtime=0
 for ((i=1; i<=$EXECS; i++)); do
@@ -39,7 +39,7 @@ rm -f ./test_files/____tempfile.data.polybench;
 # -----------------------------------------------------------------------------------------------
 # RUNNING MEDIUM DATASET
 # -----------------------------------------------------------------------------------------------
-DATA_SET="test"
+DATA_SET="medium"
 total_time=0
 mean_runtime=0
 for ((i=1; i<=$EXECS; i++)); do
@@ -61,7 +61,7 @@ rm -f ./test_files/____tempfile.data.polybench;
 # -----------------------------------------------------------------------------------------------
 # RUNNING LARGE DATASET
 # -----------------------------------------------------------------------------------------------
-DATA_SET="test"
+DATA_SET="large"
 total_time=0
 mean_runtime=0
 for ((i=1; i<=$EXECS; i++)); do
