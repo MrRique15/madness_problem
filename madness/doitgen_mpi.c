@@ -2,8 +2,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
-#include <mpi.h>
+#include <pthread.h>
 #include <stdlib.h>
+#include <getopt.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
@@ -11,42 +12,25 @@
 /* Include benchmark-specific header. */
 #include "doitgen.h"
 
+// Declaração de funções para previnir warnings
+int pthread_setconcurrency(int new_level);
+int pthread_getconcurrency(void);
 
 int nq, nr, np;
 
 DATA_TYPE ***A;
 DATA_TYPE **C4;
 
-void define_arguments(int argc, char **argv, char *data_set_identifier, int *seed, int *count_threads)
-{
-    for (int i = 1; i < argc; i++)
-    {
-        char arg_name = argv[i][1];
-        switch (arg_name)
-        {
+pthread_barrier_t barrier; // Barreira global
 
-        case 'd':
-            *data_set_identifier = argv[i][2];
-            break;
-
-        case 's':
-            char *command = argv[i];
-            command[0] = '0';
-            command[1] = '0';
-            *seed = atoi(command);
-            break;
-
-        case 't':
-            char *command2 = argv[i];
-            command2[0] = '0';
-            command2[1] = '0';
-            *count_threads = atoi(command2);
-            break;
-
-        default:
-            break;
-        }
-    }
+void show_help(char *name) {
+    fprintf(stderr, "\
+            [uso] %s <opcoes>\n\
+            -h         mostra essa tela e sai.\n\
+            -t THREADS    seta quantidade de threads.\n\
+            -d DATA_SET   seta o data_set utilizado.\n\
+            -s SSED  seta seed de numeros random.\n", name) ;
+    exit(-1) ;
 }
 
 void define_dataset(char data_set_identifier)
@@ -78,6 +62,10 @@ void define_dataset(char data_set_identifier)
         break;
 
     default:
+        printf("Wrong data_set inserted, assuming TEST\n");
+        nq = 150;
+        nr = 170;
+        np = 220;
         break;
     }
 }
@@ -147,62 +135,72 @@ static void print_array()
 
 /* Main computational kernel. The whole function will be timed,
    including the call and return. */
-// void *kernel_worker(void *arg) {
-//     int tid = *((int *)arg);
-//     int max_threads = (int)pthread_getconcurrency();
-//     int start = tid * (nr / max_threads);
-//     int end = (tid + 1) * (nr / max_threads);
-//     int r, q, p, s;
-//     DATA_TYPE sum_aux[np];
-//     for (r = start; r < end; r++) {
-//         for (q = 0; q < nq; q++) {
-//             for (p = 0; p < np; p++) {
-//                 sum_aux[p] = 0.0;
-//                 for (s = 0; s < np; s++) {
-//                     sum_aux[p] += A[r][q][s] * C4[s][p];
-//                 }
-//             }
-// 
-//             for (p = 0; p < np; p++) {
-//                 A[r][q][p] = sum_aux[p];
-//             }
-//         }
-//         // Aguarde todas as threads concluírem antes de prosseguir
-//         pthread_barrier_wait(&barrier);
-//     }
-//     
-// }
+void *kernel_worker(void *arg) {
+    int tid = *((int *)arg);
+    int max_threads = (int)pthread_getconcurrency();
+    int start = tid * (nr / max_threads);
+    int end = (tid + 1) * (nr / max_threads);
+    int r, q, p, s;
+    DATA_TYPE sum_aux[np];
+    for (r = start; r < end; r++) {
+        for (q = 0; q < nq; q++) {
+            for (p = 0; p < np; p++) {
+                sum_aux[p] = 0.0;
+                for (s = 0; s < np; s++) {
+                    sum_aux[p] += A[r][q][s] * C4[s][p];
+                }
+            }
+
+            for (p = 0; p < np; p++) {
+                A[r][q][p] = sum_aux[p];
+            }
+        }
+        // Aguarde todas as threads concluírem antes de prosseguir
+        pthread_barrier_wait(&barrier);
+    }
+    
+}
 
 int main(int argc, char **argv){
+    /* Start timer. */
+    polybench_start_instruments;
 
+    int cont_threads = 1;
     int seed = 0;
     char data_set_identifier = ' ';
     int i = 0;
+    int opt = 0;
 
-    if (argc < 2)
-    {
-        printf("Use help command: %s -h\n", argv[0]);
-        return 1;
-    }
-    else if (argc == 2 && strcmp(argv[1], "-h") == 0){
-        printf("Usage: %s -d[test|small|medium|large] -t[threads] -s[seed]\n", argv[0]);
-        return 1;
-    }
-    else{
-        define_arguments(argc, argv, &data_set_identifier, &seed, &cont_threads);
-    }
+    if ( argc < 2 ) show_help(argv[0]);
 
-    if (data_set_identifier == ' '){
-        printf("Invalid dataset identifier\n");
-        printf("Usage: %s -d[test|small|medium|large]\n", argv[0]);
-        return 1;
+    while( (opt = getopt(argc, argv, "ht:d:s:")) > 0 ) {
+        switch ( opt ) {
+            case 'h': /* help */
+                show_help(argv[0]);
+                break ;
+            case 's': /* opção -t */
+                seed = atoi(optarg);
+                printf("Getting seed %d\n", seed);
+                break;
+            case 't': /* opção -t */
+                cont_threads = atoi(optarg);
+                printf("Getting threads %d\n", cont_threads);
+                break;
+            case 'd': /* opção -d */
+                data_set_identifier = optarg[0];
+                printf("Getting data_set %c\n", data_set_identifier);
+                break;
+            default:
+                fprintf(stderr, "Opcao invalida ou faltando argumento: `%c'\n", optopt) ;
+                return -1 ;
+        }
     }
 
     /* Defines data_set to run */
     define_dataset(data_set_identifier);
-    // pthread_t threads[cont_threads];
-    // pthread_setconcurrency(cont_threads);
-    // pthread_barrier_init(&barrier, NULL, cont_threads);
+    pthread_t threads[cont_threads];
+    pthread_setconcurrency(cont_threads);
+    pthread_barrier_init(&barrier, NULL, cont_threads);
 
     /* Variable declaration/allocation. */
     alocate_data();
@@ -210,25 +208,18 @@ int main(int argc, char **argv){
     /* Initialize array(s). */
     init_arrays(seed);
 
-    /* Start timer. */
-    polybench_start_instruments;
-
     /* Run kernel. */
-    // for (i = 0; i < cont_threads; ++i){
-    //     int *tid;
-    //     tid = (int *)malloc(sizeof(int));
-    //     *tid = i;
-    //     pthread_create(&threads[i], NULL, &kernel_worker, (void *)tid);
-    // }
+    for (i = 0; i < cont_threads; ++i){
+        int *tid;
+        tid = (int *)malloc(sizeof(int));
+        *tid = i;
+        pthread_create(&threads[i], NULL, &kernel_worker, (void *)tid);
+    }
 
-    // for (i = 0; i < cont_threads; ++i){
-    //     pthread_join(threads[i], NULL);
-    // }
-    // pthread_barrier_destroy(&barrier);
-
-    /* Stop and print timer. */
-    polybench_stop_instruments;
-    polybench_print_instruments;
+    for (i = 0; i < cont_threads; ++i){
+        pthread_join(threads[i], NULL);
+    }
+    pthread_barrier_destroy(&barrier);
 
     /* Prevent dead-code elimination. All live-out data must be printed
        by the function call in argument. */
@@ -236,6 +227,10 @@ int main(int argc, char **argv){
 
     /* Be clean. */
     libera_matriz();
+
+    /* Stop and print timer. */
+    polybench_stop_instruments;
+    polybench_print_instruments;
 
     return 0;
 }

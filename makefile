@@ -26,3 +26,9 @@ run_tests:
 # github actions build to check if it compiles (DON'T CHANGE)
 build_git_actions:
 	gcc -O3 -I utilities -I $(PROG) utilities/polybench.c $(PROG).c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)
+
+run_all_sequential:
+	./test_files/auto_run_all_sequential.sh ./builds/$(OUTPUT_NAME) 
+
+run_all_parallel:
+	./test_files/auto_run_all_parallel.sh ./builds/$(OUTPUT_NAME) 
