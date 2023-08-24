@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#include <getopt.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
@@ -10,36 +11,17 @@
 /* Include benchmark-specific header. */
 #include "doitgen.h"
 
-void define_arguments(int argc, char **argv, char *data_set_identifier, int *seed, int *threads)
-{
-    for (int i = 1; i < argc; i++)
-    {
-        char arg_name = argv[i][1];
-        switch (arg_name)
-        {
+DATA_TYPE ***A;
+DATA_TYPE **C4;
 
-        case 'd':
-            *data_set_identifier = argv[i][2];
-            break;
-
-        case 's':
-            char *command = argv[i];
-            command[0] = '0';
-            command[1] = '0';
-            *seed = atoi(command);
-            break;
-
-        case 't':
-            char *command2 = argv[i];
-            command2[0] = '0';
-            command2[1] = '0';
-            *threads = atoi(command2);
-            break;
-
-        default:
-            break;
-        }
-    }
+void show_help(char *name) {
+    fprintf(stderr, "\
+            [uso] %s <opcoes>\n\
+            -h         mostra essa tela e sai.\n\
+            -t THREADS    seta quantidade de threads.\n\
+            -d DATA_SET   seta o data_set utilizado.\n\
+            -s SSED  seta seed de numeros random.\n", name) ;
+    exit(-1) ;
 }
 
 void define_dataset(char data_set_identifier, int *nq, int *nr, int *np)
@@ -71,11 +53,45 @@ void define_dataset(char data_set_identifier, int *nq, int *nr, int *np)
         break;
 
     default:
+        printf("Wrong data_set inserted, assuming TEST\n");
+        *nq = 150;
+        *nr = 170;
+        *np = 220;
         break;
     }
 }
+
+void libera_matriz(int nr, int nq, int np){
+    int line;
+
+    for(line = 0; line < nr; line++){
+        free(A[line]);
+    }
+    for(line = 0; line < np; line++){
+        free(C4[line]);
+    }
+
+    free(A);
+    free(C4);
+}
+
+void alocate_data(int nr, int nq, int np){
+    A = (DATA_TYPE ***)malloc(nr * sizeof(DATA_TYPE **));
+    C4 = (DATA_TYPE **)malloc(np * sizeof(DATA_TYPE *));
+    for (int i = 0; i < nr; i++){
+        A[i] = (DATA_TYPE **)malloc(nq * sizeof(DATA_TYPE *));
+        for (int j = 0; j < nq; j++){
+            A[i][j] = (DATA_TYPE *)malloc(np * sizeof(DATA_TYPE));
+        }
+    }
+    for (int i = 0; i < np; i++){
+        C4[i] = (DATA_TYPE *)malloc(np * sizeof(DATA_TYPE));
+    }
+}
+
+
 /* Array initialization. */
-void init_arrays(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq, np, nr, nq, np), DATA_TYPE POLYBENCH_2D(C4, np, np, np, np), int seed)
+void init_arrays(int nr, int nq, int np, int seed)
 {
     int i, j, k;
 
@@ -91,7 +107,7 @@ void init_arrays(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq, np, n
 
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
-static void print_array(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq, np, nr, nq, np))
+static void print_array(int nr, int nq, int np)
 {
     int i, j, k;
 
@@ -111,22 +127,23 @@ static void print_array(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq
 
 /* Main computational kernel. The whole function will be timed,
    including the call and return. */
-void kernel_doitgen(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq, np, nr, nq, np), DATA_TYPE POLYBENCH_2D(C4, np, np, np, np), DATA_TYPE POLYBENCH_1D(sum, np, np))
+void kernel_doitgen(int nr, int nq, int np)
 {
     int r, q, p, s;
+    DATA_TYPE sum[np];
 
-    for (r = 0; r < _PB_NR; r++){
+    for (r = 0; r < nr; r++){
         
-        for (q = 0; q < _PB_NQ; q++){
+        for (q = 0; q < nq; q++){
 
-            for (p = 0; p < _PB_NP; p++){
+            for (p = 0; p < np; p++){
                 sum[p] = SCALAR_VAL(0.0);
-                for (s = 0; s < _PB_NP; s++){
+                for (s = 0; s < np; s++){
                     sum[p] += A[r][q][s] * C4[s][p];
                 }
             }
 
-            for (p = 0; p < _PB_NP; p++){
+            for (p = 0; p < np; p++){
                 A[r][q][p] = sum[p];
             }
         }
@@ -134,64 +151,66 @@ void kernel_doitgen(int nr, int nq, int np, DATA_TYPE POLYBENCH_3D(A, nr, nq, np
 }
 
 int main(int argc, char **argv){
-
+    int opt;
     int threads = 1;
     int seed = 0;
-    char data_set_identifier = ' ';
+    char data_set_identifier=' ';
 
     /* Retrieve problem size. */
     int nr = 0;
     int nq = 0;
     int np = 0;
 
-    if (argc < 2)
-    {
-        printf("Use help command: %s -h\n", argv[0]);
-        return 1;
-    }
-    else if (argc == 2 && strcmp(argv[1], "-h") == 0){
-        printf("Usage: %s -d[test|small|medium|large] -t[threads] -s[seed]\n", argv[0]);
-        return 1;
-    }
-    else{
-        define_arguments(argc, argv, &data_set_identifier, &seed, &threads);
-    }
+    /* Start timer. */
+    polybench_start_instruments;
 
-    if (data_set_identifier == ' '){
-        printf("Invalid dataset identifier\n");
-        printf("Usage: %s -d[test|small|medium|large]\n", argv[0]);
-        return 1;
+    if ( argc < 2 ) show_help(argv[0]);
+
+    while( (opt = getopt(argc, argv, "ht:d:s:")) > 0 ) {
+        switch ( opt ) {
+            case 'h': /* help */
+                show_help(argv[0]);
+                break ;
+            case 's': /* opção -t */
+                seed = atoi(optarg);
+                printf("Getting seed %d\n", seed);
+                break;
+            case 't': /* opção -t */
+                threads = atoi(optarg);
+                printf("Getting threads %d\n", threads);
+                break;
+            case 'd': /* opção -d */
+                data_set_identifier = optarg[0];
+                printf("Getting data_set %c\n", data_set_identifier);
+                break;
+            default:
+                fprintf(stderr, "Opcao invalida ou faltando argumento: `%c'\n", optopt) ;
+                return -1 ;
+        }
     }
 
     /* Defines data_set to run */
     define_dataset(data_set_identifier, &nq, &nr, &np);
 
     /* Variable declaration/allocation. */
-    POLYBENCH_3D_ARRAY_DECL(A, DATA_TYPE, nr, nq, np, nr, nq, np);
-    POLYBENCH_1D_ARRAY_DECL(sum, DATA_TYPE, np, np);
-    POLYBENCH_2D_ARRAY_DECL(C4, DATA_TYPE, np, np, np, np);
+    alocate_data(nr, nq, np);
 
     /* Initialize array(s). */
-    init_arrays(nr, nq, np, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(C4), seed);
-
-    /* Start timer. */
-    polybench_start_instruments;
+    init_arrays(nr, nq, np, seed);
 
     /* Run kernel. */
-    kernel_doitgen(nr, nq, np, POLYBENCH_ARRAY(A), POLYBENCH_ARRAY(C4), POLYBENCH_ARRAY(sum));
+    kernel_doitgen(nr, nq, np);
+
+    /* Prevent dead-code elimination. All live-out data must be printed
+       by the function call in argument. */
+    polybench_prevent_dce(print_array(nr, nq, np));
+
+    /* Be clean. */
+    libera_matriz(nr, nq, np);
 
     /* Stop and print timer. */
     polybench_stop_instruments;
     polybench_print_instruments;
-
-    /* Prevent dead-code elimination. All live-out data must be printed
-       by the function call in argument. */
-    polybench_prevent_dce(print_array(nr, nq, np, POLYBENCH_ARRAY(A)));
-
-    /* Be clean. */
-    POLYBENCH_FREE_ARRAY(A);
-    POLYBENCH_FREE_ARRAY(sum);
-    POLYBENCH_FREE_ARRAY(C4);
 
     return 0;
 }

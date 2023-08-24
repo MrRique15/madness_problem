@@ -1,6 +1,6 @@
 # C Program Path to compile
 # or -> madness/doitgen_parallel
-PROG = madness/doitgen
+PROG = madness/doitgen_parallel
 # Runtime parameters
 DATASET = test
 THREADS = 2
@@ -12,7 +12,7 @@ OUTPUT_NAME = doitgen_build
 EXECUTIONS = 10
 
 build: 
-	gcc -O3 -I utilities -I $(PROG) utilities/polybench.c $(PROG).c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)
+	gcc -O3 -I utilities -I $(PROG) utilities/polybench.c $(PROG).c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME) -g
 
 run:
 	./builds/$(OUTPUT_NAME) -d$(DATASET) -t$(THREADS) -s$(SEED)
