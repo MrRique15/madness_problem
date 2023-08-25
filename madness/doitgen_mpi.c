@@ -2,8 +2,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
-#include <pthread.h>
 #include <stdlib.h>
+#include <mpi.h>
 #include <getopt.h>
 
 /* Include polybench common header. */
@@ -12,16 +12,12 @@
 /* Include benchmark-specific header. */
 #include "doitgen.h"
 
-// Declaração de funções para previnir warnings
-int pthread_setconcurrency(int new_level);
-int pthread_getconcurrency(void);
-
-int nq, nr, np;
+MPI_Status status;
 
 DATA_TYPE ***A;
 DATA_TYPE **C4;
-
-pthread_barrier_t barrier; // Barreira global
+DATA_TYPE *vetorized_A;
+DATA_TYPE *vetorized_C4;
 
 void show_help(char *name) {
     fprintf(stderr, "\
@@ -33,44 +29,51 @@ void show_help(char *name) {
     exit(-1) ;
 }
 
-void define_dataset(char data_set_identifier)
-{
+void define_dataset(char data_set_identifier, int *nq, int *nr, int *np){
     switch (data_set_identifier)
     {
     case 't':
-        nq = 150;
-        nr = 170;
-        np = 220;
+        *nq = 150;
+        *nr = 170;
+        *np = 220;
         break;
 
     case 's':
-        nq = 600;
-        nr = 640;
-        np = 680;
+        *nq = 600;
+        *nr = 640;
+        *np = 680;
         break;
 
     case 'm':
-        nq = 700;
-        nr = 750;
-        np = 800;
+        *nq = 700;
+        *nr = 750;
+        *np = 800;
         break;
 
     case 'l':
-        nq = 800;
-        nr = 850;
-        np = 900;
+        *nq = 800;
+        *nr = 850;
+        *np = 900;
         break;
 
     default:
         printf("Wrong data_set inserted, assuming TEST\n");
-        nq = 150;
-        nr = 170;
-        np = 220;
+        *nq = 150;
+        *nr = 170;
+        *np = 220;
         break;
     }
 }
 
-void libera_matriz(){
+int a_array_index(int i, int j, int k, int nq, int np){
+    return ((i * nq * np) + (j * np) + k);
+}
+
+int c4_array_index(int i, int j, int np){
+    return ((i * np) + j);
+}
+
+void libera_matriz(int nr, int nq, int np){
     int line;
 
     for(line = 0; line < nr; line++){
@@ -82,11 +85,15 @@ void libera_matriz(){
 
     free(A);
     free(C4);
+    free(vetorized_A);
+    free(vetorized_C4);
 }
 
-void alocate_data(){
+void alocate_data(int nr, int nq, int np){
     A = (DATA_TYPE ***)malloc(nr * sizeof(DATA_TYPE **));
     C4 = (DATA_TYPE **)malloc(np * sizeof(DATA_TYPE *));
+    vetorized_A = (DATA_TYPE *)malloc(nr * nq * np * sizeof(DATA_TYPE));
+    vetorized_C4 = (DATA_TYPE *)malloc(np * np * sizeof(DATA_TYPE));
     for (int i = 0; i < nr; i++){
         A[i] = (DATA_TYPE **)malloc(nq * sizeof(DATA_TYPE *));
         for (int j = 0; j < nq; j++){
@@ -98,25 +105,33 @@ void alocate_data(){
     }
 }
 
-
-/* Array initialization. */
-void init_arrays(int seed){
+/* Array initialization and vetorization. */
+void init_arrays(int nr, int nq, int np, int seed)
+{
     int i, j, k;
 
-    srand (seed);
-    for (i = 0; i < nr; i++)
-        for (j = 0; j < nq; j++)
-            for (k = 0; k < np; k++)
-                A[i][j][k] = (DATA_TYPE)rand() / RAND_MAX;
-    for (i = 0; i < np; i++)
-        for (j = 0; j < np; j++)
+    srand(seed);
+    for (i = 0; i < nr; i++){
+        for (j = 0; j < nq; j++){
+            for (k = 0; k < np; k++){
+                A[i][j][k] = 0.0;
+                vetorized_A[a_array_index(i, j, k, nq, np)] = (DATA_TYPE)rand() / RAND_MAX;
+            }
+        }
+    }
+
+    for (i = 0; i < np; i++){
+        for (j = 0; j < np; j++){
             C4[i][j] = (DATA_TYPE)rand() / RAND_MAX;
+
+            vetorized_C4[c4_array_index(i, j, np)] = C4[i][j];
+        }
+    }
 }
 
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
-static void print_array()
-{
+static void print_array(int nr, int nq, int np){
     int i, j, k;
 
     POLYBENCH_DUMP_START;
@@ -133,104 +148,152 @@ static void print_array()
     POLYBENCH_DUMP_FINISH;
 }
 
-/* Main computational kernel. The whole function will be timed,
-   including the call and return. */
-void *kernel_worker(void *arg) {
-    int tid = *((int *)arg);
-    int max_threads = (int)pthread_getconcurrency();
-    int start = tid * (nr / max_threads);
-    int end = (tid + 1) * (nr / max_threads);
+void de_vetorize_array(int rank, int size, int nr, int nq, int np){
+    int i, j, k, start, end;
+    start = (rank - 1) * (nr / (size - 1));
+    end = start + (nr / (size - 1));
+
+    for(i=start; i<end; i++){
+        for(j=0;j<nq;j++){
+            for(k=0;k<np;k++){
+                A[i][j][k] = vetorized_A[a_array_index(i, j, k, nq, np)];
+            }
+        }
+    }
+}
+
+/* Main computational kernel. */
+void kernel_worker(int rank, int size, int nr, int nq, int np){
+    int start, end;
+    start = (rank - 1) * (nr / (size - 1));
+    end = start + (nr / (size - 1));
     int r, q, p, s;
     DATA_TYPE sum_aux[np];
-    for (r = start; r < end; r++) {
-        for (q = 0; q < nq; q++) {
-            for (p = 0; p < np; p++) {
+    for (r = start; r < end; r++)
+    {
+        for (q = 0; q < nq; q++)
+        {
+            for (p = 0; p < np; p++)
+            {
                 sum_aux[p] = 0.0;
-                for (s = 0; s < np; s++) {
-                    sum_aux[p] += A[r][q][s] * C4[s][p];
+                for (s = 0; s < np; s++)
+                {
+                    sum_aux[p] += vetorized_A[a_array_index(r, q, s, nq, np)] * vetorized_C4[c4_array_index(s, p, np)];
                 }
             }
 
-            for (p = 0; p < np; p++) {
-                A[r][q][p] = sum_aux[p];
+            for (p = 0; p < np; p++)
+            {
+                vetorized_A[a_array_index(r, q, p, nq, np)] = sum_aux[p];
             }
         }
-        // Aguarde todas as threads concluírem antes de prosseguir
-        pthread_barrier_wait(&barrier);
     }
-    
 }
 
-int main(int argc, char **argv){
-    /* Start timer. */
-    polybench_start_instruments;
+int main(int argc, char **argv){  
+    int processCount, processId, workersCount, source, dest;
+    int nr, nq, np;
 
-    int cont_threads = 1;
-    int seed = 0;
-    char data_set_identifier = ' ';
-    int i = 0;
-    int opt = 0;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &processId);
+    MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 
-    if ( argc < 2 ) show_help(argv[0]);
+    workersCount = processCount - 1;
 
-    while( (opt = getopt(argc, argv, "ht:d:s:")) > 0 ) {
-        switch ( opt ) {
-            case 'h': /* help */
-                show_help(argv[0]);
-                break ;
-            case 's': /* opção -t */
-                seed = atoi(optarg);
-                printf("Getting seed %d\n", seed);
-                break;
-            case 't': /* opção -t */
-                cont_threads = atoi(optarg);
-                printf("Getting threads %d\n", cont_threads);
-                break;
-            case 'd': /* opção -d */
-                data_set_identifier = optarg[0];
-                printf("Getting data_set %c\n", data_set_identifier);
-                break;
-            default:
-                fprintf(stderr, "Opcao invalida ou faltando argumento: `%c'\n", optopt) ;
-                return -1 ;
+    printf("Inicializando Processo: %d de %d\n", processId, processCount);
+    if(workersCount < 1){
+        printf("No workers process found, exiting...\n");
+        MPI_Finalize();
+        return -1;
+    }
+
+    if (processId ==0){
+        polybench_start_instruments;
+    }
+
+    if (argc < 2){
+        if (processId == 0)
+            printf("Usage: %s -d data_set -s seed\n", argv[0]);
+        MPI_Finalize();
+        return -1;
+    }
+
+    if (processId == 0){
+        printf("Processo Root iniciado ID: %d apenas para distribuição de carga, não executa operações\n", processId);
+        int seed = 0;
+        char data_set_identifier = ' ';
+        int i = 0;
+
+        while ((i = getopt(argc, argv, "hd:s:")) != -1){
+            switch (i){
+                case 'h':
+                    show_help(argv[0]);
+                    break;
+                case 's':
+                    seed = atoi(optarg);
+                    break;
+                case 'd':
+                    data_set_identifier = optarg[0];
+                    break;
+                default:
+                    if (processId == 0)
+                        fprintf(stderr, "Invalid option: `%c'\n", optopt);
+                    MPI_Finalize();
+                    return -1;
+            }
         }
+
+        define_dataset(data_set_identifier, &nq, &nr, &np);
+
+        alocate_data(nr, nq, np);
+
+        init_arrays(nr, nq, np, seed);
+
+        for (dest=1; dest <= workersCount; dest++){   
+            MPI_Send(&nr, 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
+            MPI_Send(&nq, 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
+            MPI_Send(&np, 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
+
+            MPI_Send(vetorized_A, nr*nq*np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
+
+            MPI_Send(vetorized_C4, np*np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
+        }
+
+        for (int i = 1; i <= workersCount; i++){
+            source = i;
+
+            MPI_Recv(vetorized_A, nr*nq*np, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &status);
+
+            de_vetorize_array(source, processCount, nr, nq, np);
+        }
+
+        polybench_prevent_dce(print_array(nr, nq, np));
+
+        libera_matriz(nr, nq, np);
+        polybench_stop_instruments;
+        polybench_print_instruments;
     }
 
-    /* Defines data_set to run */
-    define_dataset(data_set_identifier);
-    pthread_t threads[cont_threads];
-    pthread_setconcurrency(cont_threads);
-    pthread_barrier_init(&barrier, NULL, cont_threads);
+    if (processId > 0) {
+        printf("Processo Worker iniciado ID: %d para execução de operações\n", processId);
+        source = 0;
 
-    /* Variable declaration/allocation. */
-    alocate_data();
+        MPI_Recv(&nr, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(&nq, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(&np, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
 
-    /* Initialize array(s). */
-    init_arrays(seed);
+        alocate_data(nr, nq, np);
 
-    /* Run kernel. */
-    for (i = 0; i < cont_threads; ++i){
-        int *tid;
-        tid = (int *)malloc(sizeof(int));
-        *tid = i;
-        pthread_create(&threads[i], NULL, &kernel_worker, (void *)tid);
+        MPI_Recv(vetorized_A, nr*nq*np, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
+
+        MPI_Recv(vetorized_C4, np*np, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
+
+        kernel_worker(processId, processCount, nr, nq, np);
+
+        MPI_Send(vetorized_A, nr*nq*np, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
+
+        libera_matriz(nr, nq, np);
     }
 
-    for (i = 0; i < cont_threads; ++i){
-        pthread_join(threads[i], NULL);
-    }
-    pthread_barrier_destroy(&barrier);
-
-    /* Prevent dead-code elimination. All live-out data must be printed
-       by the function call in argument. */
-    polybench_prevent_dce(print_array());
-
-    /* Be clean. */
-    libera_matriz();
-
-    /* Stop and print timer. */
-    polybench_stop_instruments;
-    polybench_print_instruments;
-
-    return 0;
+    MPI_Finalize();
 }

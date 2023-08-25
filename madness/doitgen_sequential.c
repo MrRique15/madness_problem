@@ -152,7 +152,6 @@ void kernel_doitgen(int nr, int nq, int np)
 
 int main(int argc, char **argv){
     int opt;
-    int threads = 1;
     int seed = 0;
     char data_set_identifier=' ';
 
@@ -173,9 +172,6 @@ int main(int argc, char **argv){
                 break ;
             case 's': /* opção -t */
                 seed = atoi(optarg);
-                break;
-            case 't': /* opção -t */
-                threads = atoi(optarg);
                 break;
             case 'd': /* opção -d */
                 data_set_identifier = optarg[0];
