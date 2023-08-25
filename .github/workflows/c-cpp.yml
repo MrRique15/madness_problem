@@ -16,4 +16,4 @@ jobs:
     - name: Build Program
       run: make build_git_actions
     - name: Run Executable
-      run: make run
+      run: make run_sequential
