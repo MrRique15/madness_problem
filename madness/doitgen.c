@@ -173,15 +173,12 @@ int main(int argc, char **argv){
                 break ;
             case 's': /* opção -t */
                 seed = atoi(optarg);
-                printf("Getting seed %d\n", seed);
                 break;
             case 't': /* opção -t */
                 threads = atoi(optarg);
-                printf("Getting threads %d\n", threads);
                 break;
             case 'd': /* opção -d */
                 data_set_identifier = optarg[0];
-                printf("Getting data_set %c\n", data_set_identifier);
                 break;
             default:
                 fprintf(stderr, "Opcao invalida ou faltando argumento: `%c'\n", optopt) ;

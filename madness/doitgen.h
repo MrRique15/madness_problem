@@ -46,6 +46,7 @@
 
 #ifdef DATA_TYPE_IS_DOUBLE
 #  define DATA_TYPE double
+#  define MPI_DATA_TYPE MPI_DOUBLE
 #  define DATA_PRINTF_MODIFIER "%0.2lf "
 #  define SCALAR_VAL(x) x
 #  define SQRT_FUN(x) sqrt(x)
