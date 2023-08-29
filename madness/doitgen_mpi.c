@@ -1,10 +1,9 @@
 #include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <math.h>
 #include <stdlib.h>
 #include <mpi.h>
 #include <getopt.h>
+#include <time.h>
+#include <string.h>
 
 /* Include polybench common header. */
 #include <polybench.h>
@@ -14,8 +13,7 @@
 
 MPI_Status status;
 
-DATA_TYPE ***A;
-DATA_TYPE **C4;
+DATA_TYPE *vetorized_A_final;
 DATA_TYPE *vetorized_A;
 DATA_TYPE *vetorized_C4;
 
@@ -73,48 +71,23 @@ int c4_array_index(int i, int j, int np){
     return ((i * np) + j);
 }
 
-void libera_matriz(int nr, int nq, int np){
-    int line;
-
-    for(line = 0; line < nr; line++){
-        free(A[line]);
-    }
-    for(line = 0; line < np; line++){
-        free(C4[line]);
-    }
-
-    free(A);
-    free(C4);
+void libera_matriz() {
     free(vetorized_A);
     free(vetorized_C4);
 }
 
 void alocate_data(int nr, int nq, int np){
-    A = (DATA_TYPE ***)malloc(nr * sizeof(DATA_TYPE **));
-    C4 = (DATA_TYPE **)malloc(np * sizeof(DATA_TYPE *));
     vetorized_A = (DATA_TYPE *)malloc(nr * nq * np * sizeof(DATA_TYPE));
     vetorized_C4 = (DATA_TYPE *)malloc(np * np * sizeof(DATA_TYPE));
-    for (int i = 0; i < nr; i++){
-        A[i] = (DATA_TYPE **)malloc(nq * sizeof(DATA_TYPE *));
-        for (int j = 0; j < nq; j++){
-            A[i][j] = (DATA_TYPE *)malloc(np * sizeof(DATA_TYPE));
-        }
-    }
-    for (int i = 0; i < np; i++){
-        C4[i] = (DATA_TYPE *)malloc(np * sizeof(DATA_TYPE));
-    }
 }
 
 /* Array initialization and vetorization. */
-void init_arrays(int nr, int nq, int np, int seed)
-{
-    int i, j, k;
-
+void init_arrays(int nr, int nq, int np, int seed) {
     srand(seed);
+    int i, j, k;
     for (i = 0; i < nr; i++){
         for (j = 0; j < nq; j++){
             for (k = 0; k < np; k++){
-                A[i][j][k] = 0.0;
                 vetorized_A[a_array_index(i, j, k, nq, np)] = (DATA_TYPE)rand() / RAND_MAX;
             }
         }
@@ -122,9 +95,7 @@ void init_arrays(int nr, int nq, int np, int seed)
 
     for (i = 0; i < np; i++){
         for (j = 0; j < np; j++){
-            C4[i][j] = (DATA_TYPE)rand() / RAND_MAX;
-
-            vetorized_C4[c4_array_index(i, j, np)] = C4[i][j];
+            vetorized_C4[c4_array_index(i, j, np)] = (DATA_TYPE)rand() / RAND_MAX;
         }
     }
 }
@@ -132,66 +103,62 @@ void init_arrays(int nr, int nq, int np, int seed)
 /* DCE code. Must scan the entire live-out data.
    Can be used also to check the correctness of the output. */
 static void print_array(int nr, int nq, int np){
-    int i, j, k;
-
     POLYBENCH_DUMP_START;
     POLYBENCH_DUMP_BEGIN("A");
-    for (i = 0; i < nr; i++)
-        for (j = 0; j < nq; j++)
-            for (k = 0; k < np; k++)
-            {
-                if ((i * nq * np + j * np + k) % 20 == 0)
+    for (int i = 0; i < nr; i++) {
+        for (int j = 0; j < nq; j++) {
+            for (int k = 0; k < np; k++) {
+                if ((i * nq * np + j * np + k) % 20 == 0) {
                     fprintf(POLYBENCH_DUMP_TARGET, "\n");
-                fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, A[i][j][k]);
+                }
+                fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, vetorized_A[a_array_index(i, j, k, nq, np)]);
             }
+        }
+    }
     POLYBENCH_DUMP_END("A");
     POLYBENCH_DUMP_FINISH;
 }
 
-void de_vetorize_array(int rank, int size, int nr, int nq, int np){
-    int i, j, k, start, end;
-    start = (rank - 1) * (nr / (size - 1));
-    end = start + (nr / (size - 1));
+void de_vetorize_array(int rank, int size, int nr, int nq, int np) {
+    int start = rank * (nr / size);
+    int end = (rank + 1) * (nr / size);
 
-    for(i=start; i<end; i++){
-        for(j=0;j<nq;j++){
-            for(k=0;k<np;k++){
-                A[i][j][k] = vetorized_A[a_array_index(i, j, k, nq, np)];
+    for (int i = start; i < end; i++) {
+        for (int j = 0; j < nq; j++) {
+            for (int k = 0; k < np; k++) {
+                vetorized_A[a_array_index(i, j, k, nq, np)] = vetorized_A_final[a_array_index(i, j, k, nq, np)];
             }
         }
     }
 }
 
 /* Main computational kernel. */
-void kernel_worker(int rank, int size, int nr, int nq, int np){
-    int start, end;
-    start = (rank - 1) * (nr / (size - 1));
-    end = start + (nr / (size - 1));
-    int r, q, p, s;
-    DATA_TYPE sum_aux[np];
-    for (r = start; r < end; r++)
-    {
-        for (q = 0; q < nq; q++)
-        {
-            for (p = 0; p < np; p++)
-            {
+void kernel_worker(int rank, int size, int nr, int nq, int np) {
+    int start = rank * (nr / size);
+    int end = (rank + 1) * (nr / size);
+
+    DATA_TYPE *sum_aux = (DATA_TYPE *)malloc(np * sizeof(DATA_TYPE));
+
+    for (int r = start; r < end; r++) {
+        for (int q = 0; q < nq; q++) {
+            for (int p = 0; p < np; p++) {
                 sum_aux[p] = 0.0;
-                for (s = 0; s < np; s++)
-                {
+                for (int s = 0; s < np; s++) {
                     sum_aux[p] += vetorized_A[a_array_index(r, q, s, nq, np)] * vetorized_C4[c4_array_index(s, p, np)];
                 }
             }
 
-            for (p = 0; p < np; p++)
-            {
+            for (int p = 0; p < np; p++) {
                 vetorized_A[a_array_index(r, q, p, nq, np)] = sum_aux[p];
             }
         }
     }
+
+    free(sum_aux);
 }
 
-int main(int argc, char **argv){  
-    int processCount, processId, workersCount, source, dest;
+int main(int argc, char **argv) {  
+    int processCount, processId, workersCount, source;
     int nr, nq, np;
 
     MPI_Init(&argc, &argv);
@@ -200,32 +167,32 @@ int main(int argc, char **argv){
 
     workersCount = processCount - 1;
 
-    printf("Inicializando Processo: %d de %d\n", processId, processCount);
-    if(workersCount < 1){
-        printf("No workers process found, exiting...\n");
+    printf("Initializing Process: %d of %d\n", processId, processCount);
+    if (workersCount < 1) {
+        printf("No worker processes found, exiting...\n");
         MPI_Finalize();
         return -1;
     }
 
-    if (processId ==0){
+    if (processId == 0) {
         polybench_start_instruments;
     }
 
-    if (argc < 2){
+    if (argc < 2) {
         if (processId == 0)
             printf("Usage: %s -d data_set -s seed\n", argv[0]);
         MPI_Finalize();
         return -1;
     }
 
-    if (processId == 0){
-        printf("Processo Root iniciado ID: %d apenas para distribuição de carga, não executa operações\n", processId);
+    if (processId == 0) {
+        printf("Root Process started ID: %d for workload distribution, does not perform operations\n", processId);
         int seed = 0;
         char data_set_identifier = ' ';
         int i = 0;
 
-        while ((i = getopt(argc, argv, "hd:s:")) != -1){
-            switch (i){
+        while ((i = getopt(argc, argv, "hd:s:")) != -1) {
+            switch (i) {
                 case 'h':
                     show_help(argv[0]);
                     break;
@@ -249,33 +216,36 @@ int main(int argc, char **argv){
 
         init_arrays(nr, nq, np, seed);
 
-        for (dest=1; dest <= workersCount; dest++){   
+        for (int dest = 1; dest <= workersCount; dest++) {   
             MPI_Send(&nr, 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
             MPI_Send(&nq, 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
             MPI_Send(&np, 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
 
-            MPI_Send(vetorized_A, nr*nq*np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
-
-            MPI_Send(vetorized_C4, np*np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
+            MPI_Send(vetorized_A, nr * nq * np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
+            MPI_Send(vetorized_C4, np * np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
         }
 
-        for (int i = 1; i <= workersCount; i++){
+        vetorized_A_final = (DATA_TYPE *)malloc(nr * nq * np * sizeof(DATA_TYPE));
+        
+        kernel_worker(0, processCount, nr, nq, np);
+        de_vetorize_array(0, processCount, nr, nq, np);
+        
+        for (int i = 1; i <= workersCount; i++) {
             source = i;
-
-            MPI_Recv(vetorized_A, nr*nq*np, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &status);
-
+            MPI_Recv(vetorized_A, nr * nq * np, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &status);
             de_vetorize_array(source, processCount, nr, nq, np);
         }
 
         polybench_prevent_dce(print_array(nr, nq, np));
 
-        libera_matriz(nr, nq, np);
+        libera_matriz();
+        free(vetorized_A_final);
         polybench_stop_instruments;
         polybench_print_instruments;
     }
 
     if (processId > 0) {
-        printf("Processo Worker iniciado ID: %d para execução de operações\n", processId);
+        printf("Worker Process started ID: %d for execution\n", processId);
         source = 0;
 
         MPI_Recv(&nr, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
@@ -284,15 +254,14 @@ int main(int argc, char **argv){
 
         alocate_data(nr, nq, np);
 
-        MPI_Recv(vetorized_A, nr*nq*np, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
-
-        MPI_Recv(vetorized_C4, np*np, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(vetorized_A, nr * nq * np, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(vetorized_C4, np * np, MPI_DOUBLE, source, 1, MPI_COMM_WORLD, &status);
 
         kernel_worker(processId, processCount, nr, nq, np);
 
-        MPI_Send(vetorized_A, nr*nq*np, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
+        MPI_Send(vetorized_A, nr * nq * np, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
 
-        libera_matriz(nr, nq, np);
+        libera_matriz();
     }
 
     MPI_Finalize();

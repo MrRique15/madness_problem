@@ -1,13 +1,13 @@
-# C Program Path to compile
-# or -> madness/doitgen_parallel
+# C Program Path to compile and output
 PROG = madness/doitgen
-# Runtime parameters
-DATASET = test
-THREADS = 2
-SEED = 58
-
-# Output name
 OUTPUT_NAME = doitgen_build
+
+# Runtime parameters
+DATASET = large
+THREADS = 16
+SEED = 58
+MPI_WORKERS = 2
+
 # Number of executions to run in tests
 EXECUTIONS = 10
 # ###############################################################################################
@@ -30,12 +30,12 @@ build_mpi:
 	mpicc -O3 -I utilities -I $(PROG)_mpi utilities/polybench.c $(PROG)_mpi.c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)_mpi -g
 
 run_mpi:
-	mpirun -np 3 ./builds/$(OUTPUT_NAME)_mpi -d $(DATASET) -s $(SEED)
+	mpirun -np $(MPI_WORKERS) ./builds/$(OUTPUT_NAME)_mpi -d $(DATASET) -s $(SEED)
 # ###############################################################################################
 # ###############################################################################################
 # auxiliar commands
 gdb_mpi:
-	mpirun -np 3 gdb -ex run --args ./builds/$(OUTPUT_NAME) -d $(DATASET) -s $(SEED)
+	mpirun -np $(MPI_WORKERS) gdb -ex run --args ./builds/$(OUTPUT_NAME) -d $(DATASET) -s $(SEED)
 
 build_papi:
 	gcc -O3 -I utilities -I $(PROG) utilities/polybench.c $(PROG).c -DPOLYBENCH_PAPI -lpapi -o builds/$(OUTPUT_NAME)
