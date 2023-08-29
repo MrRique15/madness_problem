@@ -3,10 +3,10 @@ PROG = madness/doitgen
 OUTPUT_NAME = doitgen_build
 
 # Runtime parameters
-DATASET = large
+DATASET = small
 THREADS = 16
 SEED = 58
-MPI_WORKERS = 2
+MPI_WORKERS = 1
 
 # Number of executions to run in tests
 EXECUTIONS = 10

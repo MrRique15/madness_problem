@@ -149,9 +149,16 @@ void kernel_worker(int rank, int size, int nr, int nq, int np) {
             }
 
             for (int p = 0; p < np; p++) {
-                vetorized_A[a_array_index(r, q, p, nq, np)] = sum_aux[p];
+                if(rank != 0){
+                    vetorized_A[a_array_index(r, q, p, nq, np)] = sum_aux[p];
+                }else{
+                    vetorized_A_final[a_array_index(r, q, p, nq, np)] = sum_aux[p];
+                }
+                
             }
         }
+
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     free(sum_aux);
@@ -166,13 +173,12 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 
     workersCount = processCount - 1;
-
-    printf("Initializing Process: %d of %d\n", processId, processCount);
-    if (workersCount < 1) {
-        printf("No worker processes found, exiting...\n");
-        MPI_Finalize();
-        return -1;
-    }
+    
+    // if (workersCount < 1) {
+    //     printf("No worker processes found, exiting...\n");
+    //     MPI_Finalize();
+    //     return -1;
+    // }
 
     if (processId == 0) {
         polybench_start_instruments;
@@ -186,7 +192,7 @@ int main(int argc, char **argv) {
     }
 
     if (processId == 0) {
-        printf("Root Process started ID: %d for workload distribution, does not perform operations\n", processId);
+        printf("Root Process started ID: %d\n", processId);
         int seed = 0;
         char data_set_identifier = ' ';
         int i = 0;
@@ -227,8 +233,7 @@ int main(int argc, char **argv) {
 
         vetorized_A_final = (DATA_TYPE *)malloc(nr * nq * np * sizeof(DATA_TYPE));
         
-        kernel_worker(0, processCount, nr, nq, np);
-        de_vetorize_array(0, processCount, nr, nq, np);
+        kernel_worker(processId, processCount, nr, nq, np);
         
         for (int i = 1; i <= workersCount; i++) {
             source = i;
@@ -245,7 +250,7 @@ int main(int argc, char **argv) {
     }
 
     if (processId > 0) {
-        printf("Worker Process started ID: %d for execution\n", processId);
+        printf("Worker Process started ID: %d\n", processId);
         source = 0;
 
         MPI_Recv(&nr, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
