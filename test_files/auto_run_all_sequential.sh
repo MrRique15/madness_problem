@@ -11,7 +11,6 @@ fi;
 PRORGAM_PATH="$1"
 # Get the number of executions from the second argument
 EXECS=10
-THREADS=0
 SEED=58
 
 # -----------------------------------------------------------------------------------------------
@@ -21,7 +20,7 @@ DATA_SET="small"
 total_time=0
 mean_runtime=0
 for ((i=1; i<=$EXECS; i++)); do
-    runtime=$(./$PRORGAM_PATH -s $SEED -t $THREADS -d $DATA_SET| grep -oP '\K[0-9]+\.[0-9]+')
+    runtime=$(./$PRORGAM_PATH -s $SEED -d $DATA_SET| grep -oP '\K[0-9]+\.[0-9]+')
  
     echo "$runtime" >> ./test_files/____tempfile.data.polybench
 
@@ -43,7 +42,7 @@ DATA_SET="medium"
 total_time=0
 mean_runtime=0
 for ((i=1; i<=$EXECS; i++)); do
-    runtime=$(./$PRORGAM_PATH -s $SEED -t $THREADS -d $DATA_SET| grep -oP '\K[0-9]+\.[0-9]+')
+    runtime=$(./$PRORGAM_PATH -s $SEED -d $DATA_SET| grep -oP '\K[0-9]+\.[0-9]+')
 
     echo "$runtime" >> ./test_files/____tempfile.data.polybench
 
@@ -65,7 +64,7 @@ DATA_SET="large"
 total_time=0
 mean_runtime=0
 for ((i=1; i<=$EXECS; i++)); do
-    runtime=$(./$PRORGAM_PATH -s $SEED -t $THREADS -d $DATA_SET| grep -oP '\K[0-9]+\.[0-9]+')
+    runtime=$(./$PRORGAM_PATH -s $SEED -d $DATA_SET| grep -oP '\K[0-9]+\.[0-9]+')
 
     echo "$runtime" >> ./test_files/____tempfile.data.polybench
 

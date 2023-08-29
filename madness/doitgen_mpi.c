@@ -74,6 +74,7 @@ int c4_array_index(int i, int j, int np){
 void libera_matriz() {
     free(vetorized_A);
     free(vetorized_C4);
+    free(vetorized_A_final);
 }
 
 void alocate_data(int nr, int nq, int np){
@@ -173,7 +174,7 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 
     workersCount = processCount - 1;
-    
+
     // if (workersCount < 1) {
     //     printf("No worker processes found, exiting...\n");
     //     MPI_Finalize();
@@ -244,7 +245,6 @@ int main(int argc, char **argv) {
         polybench_prevent_dce(print_array(nr, nq, np));
 
         libera_matriz();
-        free(vetorized_A_final);
         polybench_stop_instruments;
         polybench_print_instruments;
     }
