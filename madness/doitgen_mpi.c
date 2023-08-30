@@ -151,12 +151,6 @@ int main(int argc, char **argv) {
 
     workersCount = processCount - 1;
 
-    if (workersCount < 1) {
-        printf("No worker processes found, exiting...\n");
-        MPI_Finalize();
-        return -1;
-    }
-
     if (processId == 0) {
         polybench_start_instruments;
     }
@@ -195,7 +189,7 @@ int main(int argc, char **argv) {
 
         define_dataset(data_set_identifier, &nq, &nr, &np);
 
-        rows = nr / workersCount;
+        rows = nr / processCount;
         offset = 0;
 
         // alocate and intialyze all data in root
@@ -204,6 +198,7 @@ int main(int argc, char **argv) {
 
         // sending data to workers
         for (int dest = 1; dest <= workersCount; dest++) {
+            offset = offset + rows;
             if(dest == workersCount){
                 rows = nr - offset;
             }
@@ -214,10 +209,13 @@ int main(int argc, char **argv) {
 
             MPI_Send(vetorized_A + (offset * nq * np), rows * nq * np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
             MPI_Send(vetorized_C4, np * np, MPI_DOUBLE, dest, 1, MPI_COMM_WORLD);
-
-            offset = offset + rows;
         }
         
+        // call kernel to multiply matrixes
+        kernel_worker(rows, nq, np);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
         // receiving data from workers and updating vetorized_A
         for (int i = 1; i <= workersCount; i++) {
             source = i;
@@ -241,12 +239,11 @@ int main(int argc, char **argv) {
         source = 0;
 
         // receive data from root
-        MPI_Recv(&nr, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(&rows, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
         MPI_Recv(&nq, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
         MPI_Recv(&np, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
-        MPI_Recv(&offset, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
 
-        rows = nr;
+        MPI_Recv(&offset, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
 
         //alocate data in worker
         alocate_data(rows, nq, np);
@@ -258,6 +255,7 @@ int main(int argc, char **argv) {
         // call kernel to multiply matrixes
         kernel_worker(rows, nq, np);
 
+        MPI_Barrier(MPI_COMM_WORLD);
         // send data back to root
         MPI_Send(&offset, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
         MPI_Send(vetorized_A, rows * nq * np, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
