@@ -6,7 +6,7 @@ OUTPUT_NAME = doitgen_build
 DATASET = large
 THREADS = 16
 SEED = 58
-MPI_WORKERS = 2
+MPI_WORKERS = 16
 
 # Number of executions to run in tests
 EXECUTIONS = 10

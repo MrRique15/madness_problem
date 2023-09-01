@@ -44,21 +44,21 @@ void define_dataset(char data_set_identifier)
         break;
 
     case 's':
-        nq = 600;
-        nr = 640;
-        np = 680;
+        nq = 420;
+        nr = 470;
+        np = 520;
         break;
 
     case 'm':
-        nq = 700;
-        nr = 750;
-        np = 800;
+        nq = 520;
+        nr = 570;
+        np = 620;
         break;
 
     case 'l':
-        nq = 800;
-        nr = 850;
-        np = 900;
+        nq = 620;
+        nr = 670;
+        np = 720;
         break;
 
     default:
