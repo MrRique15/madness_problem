@@ -3,16 +3,16 @@ PROG = madness/doitgen
 OUTPUT_NAME = doitgen_build
 
 # Runtime parameters
-DATASET = large
-THREADS = 16
+DATASET = test
+THREADS = 4
 SEED = 58
-MPI_WORKERS = 16
+MPI_WORKERS = 4
 
 # Number of executions to run in tests
 EXECUTIONS = 10
 # ###############################################################################################
 # sequential commands
-build_sequential: 
+build_sequential:
 	gcc -O3 -I utilities -I $(PROG)_sequential utilities/polybench.c $(PROG)_sequential.c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)_sequential
 
 run_sequential:
