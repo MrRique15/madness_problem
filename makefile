@@ -67,3 +67,5 @@ run_all_sequential:
 run_all_parallel:
 	./test_files/auto_run_all_parallel.sh ./builds/$(OUTPUT_NAME)_parallel
 
+run_complete:
+	./test_files/auto_run_complete.sh
