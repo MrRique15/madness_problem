@@ -140,6 +140,9 @@ void *kernel_worker(void *arg) {
     int max_threads = (int)pthread_getconcurrency();
     int start = tid * (nr / max_threads);
     int end = (tid + 1) * (nr / max_threads);
+    if (tid == max_threads - 1) {
+        end = nr;
+    }
     int r, q, p, s;
     DATA_TYPE sum_aux[np];
     for (r = start; r < end; r++) {
@@ -156,8 +159,9 @@ void *kernel_worker(void *arg) {
             }
         }
         // Aguarde todas as threads concluírem antes de prosseguir
-        pthread_barrier_wait(&barrier);
     }
+
+    pthread_barrier_wait(&barrier);
     
 }
 

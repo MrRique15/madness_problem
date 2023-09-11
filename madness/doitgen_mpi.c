@@ -138,6 +138,7 @@ void kernel_worker(int rows, int nq, int np) {
     }
 
     free(sum_aux);
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 int main(int argc, char **argv) {  
@@ -163,7 +164,6 @@ int main(int argc, char **argv) {
     }
 
     if (processId == 0) {
-        printf("Root Process started ID: %d\n", processId);
         int seed = 0;
         char data_set_identifier = ' ';
         int i = 0;
@@ -214,8 +214,6 @@ int main(int argc, char **argv) {
         // call kernel to multiply matrixes
         kernel_worker(rows, nq, np);
 
-        MPI_Barrier(MPI_COMM_WORLD);
-
         // receiving data from workers and updating vetorized_A
         for (int i = 1; i <= workersCount; i++) {
             source = i;
@@ -234,8 +232,6 @@ int main(int argc, char **argv) {
     }
 
     if (processId > 0) {
-        // nr = rows (in workers)
-        printf("Worker Process started ID: %d\n", processId);
         source = 0;
 
         // receive data from root
@@ -255,7 +251,6 @@ int main(int argc, char **argv) {
         // call kernel to multiply matrixes
         kernel_worker(rows, nq, np);
 
-        MPI_Barrier(MPI_COMM_WORLD);
         // send data back to root
         MPI_Send(&offset, 1, MPI_INT, 0, 2, MPI_COMM_WORLD);
         MPI_Send(vetorized_A, rows * nq * np, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
