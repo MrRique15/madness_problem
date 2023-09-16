@@ -158,7 +158,6 @@ void *kernel_worker(void *arg) {
                 A[r][q][p] = sum_aux[p];
             }
         }
-        // Aguarde todas as threads concluírem antes de prosseguir
     }
 
     pthread_barrier_wait(&barrier);

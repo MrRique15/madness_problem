@@ -3,10 +3,10 @@ PROG = madness/doitgen
 OUTPUT_NAME = doitgen_build
 
 # Runtime parameters
-DATASET = test
-THREADS = 4
+DATASET = large
+THREADS = 10
 SEED = 58
-MPI_WORKERS = 4
+MPI_WORKERS = 2
 
 # Number of executions to run in tests
 EXECUTIONS = 10
@@ -31,6 +31,13 @@ build_mpi:
 
 run_mpi:
 	mpirun -np $(MPI_WORKERS) ./builds/$(OUTPUT_NAME)_mpi -d $(DATASET) -s $(SEED)
+# ###############################################################################################
+# mpi+threads commands
+build_mpi_threads: 
+	mpicc -O3 -I utilities -I $(PROG)_mpi_threads utilities/polybench.c $(PROG)_mpi_threads.c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)_mpi_threads -g
+
+run_mpi_threads:
+	mpirun -np $(MPI_WORKERS) ./builds/$(OUTPUT_NAME)_mpi_threads -t $(THREADS) -d $(DATASET) -s $(SEED)
 # ###############################################################################################
 # ###############################################################################################
 # auxiliar commands
