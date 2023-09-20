@@ -173,10 +173,12 @@ int main(int argc, char **argv){
     char data_set_identifier = ' ';
     int i = 0;
     int opt = 0;
+    int print_result = 0;
+    int verify_output = 0;
 
     if ( argc < 2 ) show_help(argv[0]);
 
-    while( (opt = getopt(argc, argv, "ht:d:s:")) > 0 ) {
+    while( (opt = getopt(argc, argv, "ht:d:s:p:v:")) > 0 ) {
         switch ( opt ) {
             case 'h': /* help */
                 show_help(argv[0]);
@@ -189,6 +191,12 @@ int main(int argc, char **argv){
                 break;
             case 'd': /* opção -d */
                 data_set_identifier = optarg[0];
+                break;
+            case 'p':
+                print_result = atoi(optarg);
+                break;
+            case 'v':
+                verify_output = atoi(optarg);
                 break;
             default:
                 fprintf(stderr, "Opcao invalida ou faltando argumento: `%c'\n", optopt) ;
@@ -223,14 +231,25 @@ int main(int argc, char **argv){
 
     /* Prevent dead-code elimination. All live-out data must be printed
        by the function call in argument. */
-    polybench_prevent_dce(print_array());
+    if(verify_output == 1){
+        polybench_prevent_dce(print_array());
+    }
 
-    /* Be clean. */
-    libera_matriz();
+    if(print_result == 1){
+        /* Stop and print timer. */
+        polybench_stop_instruments;
 
-    /* Stop and print timer. */
-    polybench_stop_instruments;
-    polybench_print_instruments;
+        print_array();
+
+        /* Be clean. */
+        libera_matriz();
+        polybench_print_instruments;
+    }else{
+        libera_matriz();
+        /* Stop and print timer. */
+        polybench_stop_instruments;
+        polybench_print_instruments;
+    }
 
     return 0;
 }

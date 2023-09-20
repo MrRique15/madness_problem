@@ -181,8 +181,10 @@ int main(int argc, char **argv) {
         int seed = 0;
         char data_set_identifier = ' ';
         int i = 0;
+        int print_result = 0;
+        int verify_output = 0;
 
-        while ((i = getopt(argc, argv, "ht:d:s:")) != -1) {
+        while ((i = getopt(argc, argv, "ht:d:s:p:v:")) != -1) {
             switch (i) {
                 case 'h':
                     show_help(argv[0]);
@@ -195,6 +197,12 @@ int main(int argc, char **argv) {
                     break;
                 case 'd':
                     data_set_identifier = optarg[0];
+                    break;
+                case 'p':
+                    print_result = atoi(optarg);
+                    break;
+                case 'v':
+                    verify_output = atoi(optarg);
                     break;
                 default:
                     if (processId == 0)
@@ -263,14 +271,27 @@ int main(int argc, char **argv) {
             MPI_Recv(vetorized_A + (offset * nq * np), rows * nq * np, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &status);
         }
 
-        polybench_prevent_dce(print_array());
+        if(verify_output == 1){
+            polybench_prevent_dce(print_array());
+        }   
+        
+        if(print_result == 1){
+            polybench_stop_instruments;
 
-        // free data
-        libera_matriz();
+            // print_array();
 
-        // stop timer and print
-        polybench_stop_instruments;
-        polybench_print_instruments;
+            libera_matriz();
+
+            polybench_print_instruments;
+        }else{
+            // free data
+            libera_matriz();
+
+            // stop timer and print
+            polybench_stop_instruments;
+            polybench_print_instruments;
+        }
+        
     }
 
     if (processId > 0) {

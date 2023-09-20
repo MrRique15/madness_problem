@@ -3,41 +3,43 @@ PROG = madness/doitgen
 OUTPUT_NAME = doitgen_build
 
 # Runtime parameters
-DATASET = large
-THREADS = 10
-SEED = 58
-MPI_WORKERS = 2
+DATASET=test
+THREADS=4
+SEED=58
+MPI_WORKERS=2
+PRINT_RESULTS=0  # 0 - don't print results; 1 - print results
+VERIFY_OUTPUT=1  # 0 - don't verify results; 1 - verify results
 
 # Number of executions to run in tests
-EXECUTIONS = 10
+EXECUTIONS=10
 # ###############################################################################################
 # sequential commands
 build_sequential:
 	gcc -O3 -I utilities -I $(PROG)_sequential utilities/polybench.c $(PROG)_sequential.c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)_sequential
 
 run_sequential:
-	./builds/$(OUTPUT_NAME)_sequential -d $(DATASET) -s $(SEED)
+	./builds/$(OUTPUT_NAME)_sequential -d $(DATASET) -s $(SEED) -p $(PRINT_RESULTS) -v $(VERIFY_OUTPUT)
 # ###############################################################################################
 # parallel commands
 build_parallel: 
 	gcc -O3 -I utilities -I $(PROG)_parallel utilities/polybench.c $(PROG)_parallel.c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)_parallel
 
 run_parallel:
-	./builds/$(OUTPUT_NAME)_parallel -d $(DATASET) -t $(THREADS) -s $(SEED)
+	./builds/$(OUTPUT_NAME)_parallel -d $(DATASET) -t $(THREADS) -s $(SEED) -p $(PRINT_RESULTS) -v $(VERIFY_OUTPUT)
 # ###############################################################################################
 # mpi commands
 build_mpi: 
 	mpicc -O3 -I utilities -I $(PROG)_mpi utilities/polybench.c $(PROG)_mpi.c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)_mpi -g
 
 run_mpi:
-	mpirun -np $(MPI_WORKERS) ./builds/$(OUTPUT_NAME)_mpi -d $(DATASET) -s $(SEED)
+	mpirun -np $(MPI_WORKERS) ./builds/$(OUTPUT_NAME)_mpi -d $(DATASET) -s $(SEED) -p $(PRINT_RESULTS) -v $(VERIFY_OUTPUT)
 # ###############################################################################################
 # mpi+threads commands
 build_mpi_threads: 
 	mpicc -O3 -I utilities -I $(PROG)_mpi_threads utilities/polybench.c $(PROG)_mpi_threads.c -DPOLYBENCH_TIME -o builds/$(OUTPUT_NAME)_mpi_threads -g
 
 run_mpi_threads:
-	mpirun -np $(MPI_WORKERS) ./builds/$(OUTPUT_NAME)_mpi_threads -t $(THREADS) -d $(DATASET) -s $(SEED)
+	mpirun -np $(MPI_WORKERS) ./builds/$(OUTPUT_NAME)_mpi_threads -t $(THREADS) -d $(DATASET) -s $(SEED) -p $(PRINT_RESULTS) -v $(VERIFY_OUTPUT)
 # ###############################################################################################
 # ###############################################################################################
 # auxiliar commands

@@ -154,6 +154,8 @@ int main(int argc, char **argv){
     int opt;
     int seed = 0;
     char data_set_identifier=' ';
+    int print_result = 0;
+    int verify_output = 0;
 
     /* Retrieve problem size. */
     int nr = 0;
@@ -165,7 +167,7 @@ int main(int argc, char **argv){
 
     if ( argc < 2 ) show_help(argv[0]);
 
-    while( (opt = getopt(argc, argv, "ht:d:s:")) > 0 ) {
+    while( (opt = getopt(argc, argv, "hd:s:p:v:")) > 0 ) {
         switch ( opt ) {
             case 'h': /* help */
                 show_help(argv[0]);
@@ -176,8 +178,14 @@ int main(int argc, char **argv){
             case 'd': /* opção -d */
                 data_set_identifier = optarg[0];
                 break;
+            case 'p':
+                print_result = atoi(optarg);
+                break;
+            case 'v':
+                verify_output = atoi(optarg);
+                break;
             default:
-                fprintf(stderr, "Opcao invalida ou faltando argumento: `%c'\n", optopt) ;
+                fprintf(stderr, "Opcao invalida ou faltando argumento: '%c'\n", optopt) ;
                 return -1 ;
         }
     }
@@ -196,14 +204,25 @@ int main(int argc, char **argv){
 
     /* Prevent dead-code elimination. All live-out data must be printed
        by the function call in argument. */
-    polybench_prevent_dce(print_array(nr, nq, np));
+    if(verify_output == 1){
+        polybench_prevent_dce(print_array(nr, nq, np));
+    }
 
-    /* Be clean. */
-    libera_matriz(nr, nq, np);
+    if(print_result == 1){
+        /* Stop and print timer. */
+        polybench_stop_instruments;
 
-    /* Stop and print timer. */
-    polybench_stop_instruments;
-    polybench_print_instruments;
+        print_array(nr, nq, np);
 
+        /* Be clean. */
+        libera_matriz(nr, nq, np);
+        polybench_print_instruments;
+    }else{
+        libera_matriz(nr, nq, np);
+        /* Stop and print timer. */
+        polybench_stop_instruments;
+        polybench_print_instruments;
+    }
+    
     return 0;
 }
