@@ -17,10 +17,11 @@ DATA_TYPE **C4;
 void show_help(char *name) {
     fprintf(stderr, "\
             [uso] %s <opcoes>\n\
-            -h         mostra essa tela e sai.\n\
-            -t THREADS    seta quantidade de threads.\n\
+            -h            mostra essa tela e sai.\n\
             -d DATA_SET   seta o data_set utilizado.\n\
-            -s SSED  seta seed de numeros random.\n", name) ;
+            -s SEED       seta seed de numeros random.\n\
+            -p (1 or 0)   print result or not.\n\
+            -v (1 or 0)   verify output or not.\n", name) ;
     exit(-1) ;
 }
 
@@ -165,7 +166,7 @@ int main(int argc, char **argv){
     /* Start timer. */
     polybench_start_instruments;
 
-    if ( argc < 2 ) show_help(argv[0]);
+    if ( argc < 3 ) show_help(argv[0]);
 
     while( (opt = getopt(argc, argv, "hd:s:p:v:")) > 0 ) {
         switch ( opt ) {

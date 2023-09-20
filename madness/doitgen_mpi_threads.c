@@ -31,8 +31,12 @@ void show_help(char *name) {
             -h         mostra essa tela e sai.\n\
             -t THREADS    seta quantidade de threads.\n\
             -d DATA_SET   seta o data_set utilizado.\n\
-            -s SSED  seta seed de numeros random.\n", name) ;
-    exit(-1) ;
+            -s SEED       seta seed de numeros random.\n\
+            -p (1 or 0)   print result or not.\n\
+            -v (1 or 0)   verify output or not.\n", name);
+
+    MPI_Finalize();
+    exit(-1);
 }
 
 void define_dataset(char data_set_identifier){
@@ -170,11 +174,13 @@ int main(int argc, char **argv) {
         polybench_start_instruments;
     }
 
-    if (argc < 3) {
-        if (processId == 0)
-            printf("Usage: %s -t threads -d data_set -s seed\n", argv[0]);
-        MPI_Finalize();
-        return -1;
+    if (argc < 4){
+        if(processId == 0){
+            show_help(argv[0]);
+        }else{
+            MPI_Finalize();
+            return -1;
+        }
     }
 
     if (processId == 0) {

@@ -19,9 +19,12 @@ DATA_TYPE *vetorized_C4;
 void show_help(char *name) {
     fprintf(stderr, "\
             [uso] %s <opcoes>\n\
-            -h         mostra essa tela e sai.\n\
+            -h            mostra essa tela e sai.\n\
             -d DATA_SET   seta o data_set utilizado.\n\
-            -s SSED  seta seed de numeros random.\n", name) ;
+            -s SEED       seta seed de numeros random.\n\
+            -p (1 or 0)   print result or not.\n\
+            -v (1 or 0)   verify output or not.\n", name);
+    MPI_Finalize();
     exit(-1) ;
 }
 
@@ -155,11 +158,13 @@ int main(int argc, char **argv) {
         polybench_start_instruments;
     }
 
-    if (argc < 2) {
-        if (processId == 0)
-            printf("Usage: %s -d data_set -s seed\n", argv[0]);
-        MPI_Finalize();
-        return -1;
+    if (argc < 3){
+        if(processId == 0){
+            show_help(argv[0]);
+        }else{
+            MPI_Finalize();
+            return -1;
+        }
     }
 
     if (processId == 0) {
@@ -228,25 +233,25 @@ int main(int argc, char **argv) {
             MPI_Recv(vetorized_A + (offset * nq * np), rows * nq * np, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &status);
         }
 
-        // if(verify_output == 1){
+        if(verify_output == 1){
             polybench_prevent_dce(print_array(nr, nq, np));
-        // }
+        }
 
-        // if(print_result == 1){
-        //     /* Stop and print timer. */
-        //     polybench_stop_instruments;
+        if(print_result == 1){
+            /* Stop and print timer. */
+            polybench_stop_instruments;
 
-        //     print_array(nr, nq, np);
+            print_array(nr, nq, np);
 
-        //     /* Be clean. */
-        //     libera_matriz();
-        //     polybench_print_instruments;
-        // }else{
+            /* Be clean. */
+            libera_matriz();
+            polybench_print_instruments;
+        }else{
             libera_matriz();
             /* Stop and print timer. */
             polybench_stop_instruments;
             polybench_print_instruments;
-        // }
+        }
     }
 
     if (processId > 0) {
