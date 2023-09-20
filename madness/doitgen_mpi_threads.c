@@ -278,7 +278,7 @@ int main(int argc, char **argv) {
         if(print_result == 1){
             polybench_stop_instruments;
 
-            // print_array();
+            print_array();
 
             libera_matriz();
 
