@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if [ $# -ne 1 ]; then
-    echo "Usage: ./auto_run.sh <binary_name>";
-    echo "Example: ./auto_run.sh \"./a.out\"";
+    echo "Usage: ./auto_run_all_sequential.sh <binary_name>";
+    echo "Example: ./auto_run_all_sequential.sh \"./a.out\"";
     echo "Note: the file must be a Polybench program compiled with -DPOLYBENCH_TIME";
     exit 1;
 fi;

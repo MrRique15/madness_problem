@@ -76,5 +76,8 @@ run_all_sequential:
 run_all_parallel:
 	./test_files/auto_run_all_parallel.sh ./builds/$(OUTPUT_NAME)_parallel
 
+run_all_mpi_threads:
+	./test_files/auto_run_all_mpi_threads.sh ./builds/$(OUTPUT_NAME)_mpi_threads
+
 run_complete:
 	./test_files/auto_run_complete.sh
