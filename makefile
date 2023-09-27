@@ -3,10 +3,10 @@ PROG = madness/doitgen
 OUTPUT_NAME = doitgen_build
 
 # Runtime parameters
-DATASET=test
-THREADS=4
+DATASET=large
+THREADS=16
 SEED=58
-MPI_WORKERS=2
+MPI_WORKERS=8
 PRINT_RESULTS=0  # 0 - don't print results; 1 - print results
 VERIFY_OUTPUT=1  # 0 - don't verify results; 1 - verify results
 

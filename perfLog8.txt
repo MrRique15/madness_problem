@@ -1,0 +1,25 @@
+# started on Wed Sep 27 17:05:07 2023
+
+
+ Performance counter stats for 'mpirun -np 8 ./builds/doitgen_build_mpi -d medium -s 58':
+
+        709.053,37 msec task-clock                       #    7,842 CPUs utilized             
+            24.480      context-switches                 #   34,525 /sec                      
+               230      cpu-migrations                   #    0,324 /sec                      
+           711.365      page-faults                      #    1,003 K/sec                     
+   990.104.462.269      cycles                           #    1,396 GHz                       
+ 1.018.207.259.457      instructions                     #    1,03  insn per cycle            
+   160.965.457.542      branches                         #  227,015 M/sec                     
+       195.999.701      branch-misses                    #    0,12% of all branches           
+ 2.472.401.465.045      slots                            #    3,487 G/sec                     
+   665.155.119.602      topdown-retiring                 #     23,4% Retiring                 
+ 1.383.324.933.455      topdown-bad-spec                 #     48,6% Bad Speculation          
+   440.117.734.717      topdown-fe-bound                 #     15,5% Frontend Bound           
+   356.609.994.695      topdown-be-bound                 #     12,5% Backend Bound            
+
+      90,420709686 seconds time elapsed
+
+     705,337445000 seconds user
+       3,626162000 seconds sys
+
+
