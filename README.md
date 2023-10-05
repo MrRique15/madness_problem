@@ -2,13 +2,30 @@
 Parallel MADNESS problem implementation, using doitgen kernel from Prolybench, a simplified version of the MADNESS problem for benchmarking purposes.
 
 
-# --- SEQUENTIAL IMPLEMENTATION ---
-## How to run
-2. Go to `makefile`, change `PROG` variable to the path of your C program to compile
-3. Still in `makefile`, change `DATASET` to the dataset you want to run and `OUTPUT_NAME` to the path of the output file
-4. Run `make build` in the root directory to build the program
-5. Run `make run` in the root directory to run the program
+# --- Executing the program ---
+This proggram has different ways to be executed, depending on the objective.
+The parameters to be passed to the program are defined into the Makefile, so change them before running, or, they can be passed using the command line.
 
-## How to run tests
-1. In `makefile`, change `EXECUTIONS` to the number of times you want to run the program
-2. Run `make run_tests` in the root directory, it will run the program `EXECUTIONS` times and show the average execution time
+-> To execute sequential version:
+```
+    $ make build_sequential
+    $ make run_sequential
+```
+
+-> To execute Threads version:
+```
+    $ make build_threads
+    $ make run_threads
+```
+
+-> To execute MPI version:
+```
+    $ make build_mpi
+    $ make run_mpi
+```
+
+-> To execute MPI + Threads version:
+```
+    $ make build_mpi_threads
+    $ make run_mpi_threads
+```
